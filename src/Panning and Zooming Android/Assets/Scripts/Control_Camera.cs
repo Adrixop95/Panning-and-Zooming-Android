@@ -6,23 +6,34 @@ using UnityEngine.SceneManagement;
 
 public class Control_Camera : MonoBehaviour {
 
-
     private Vector3     touchStart;
-    public  float       zoomOutMin = 1;
+    private int         points      =   0;
+    public  float       zoomOutMin  =   1;
     public  float       zoomSpeed   =   8f;
-    public  float       zoomOutMax = 10;
+    public  float       zoomOutMax  =   10;
     public  Vector3[]   moveBorders =   new Vector3[2];
 
-    // Start is called before the first frame update
-    void Start() {
-        
-    }
-
-    // Update is called once per frame
+    // ##########################################################################################
     void Update() {
+        BackButton();
         if (PinchToZoom()) { return; };
         MoveCamera();
         OnTouchObject();
+    }
+
+    // ------------------------------------------------------------------------------------------
+    private void BackButton() {
+        if ( Input.GetKeyUp( KeyCode.Escape ) ) {
+            if (Application.platform == RuntimePlatform.Android) {
+                string              activity_class  =   "com.unity3d.player.UnityPlayer";
+                string              activity_name   =   "currentActivity";
+                AndroidJavaObject   activity        =   new AndroidJavaClass( activity_class ).GetStatic<AndroidJavaObject>( activity_name );
+                activity.Call<bool>( "moveTaskToBack", true );
+
+            } else {
+                Application.Quit();
+            }
+        }
     }
 
     // ##########################################################################################
@@ -52,6 +63,8 @@ public class Control_Camera : MonoBehaviour {
                 GameObject hit = touch.transform.gameObject;
                 if ( hit.tag == "Hittable" ) {
                     Destroy(hit);
+                    points++;
+                    GameObject.Find("Points Text").GetComponent<Text>().text = "Twoje próby: " + points.ToString();
                 } else if ( hit.tag == "HitEnd") {
                     SceneManager.LoadScene( SceneManager.GetActiveScene().name );
                 }
@@ -63,13 +76,13 @@ public class Control_Camera : MonoBehaviour {
     private void MoveCamera() {
         //  Touch Start
         if (Input.GetMouseButtonDown(0)) {
-            touchStart = TouchPoint();
-            GameObject.Find("Text").GetComponent<Text>().text = "";
+            touchStart  =   TouchPoint();
+            GameObject.Find("Title Text").GetComponent<Text>().text = "";
         }
         //  Touch End
         if (Input.GetMouseButton(0)) {
-            Vector3 direction   =   touchStart - TouchPoint();
-            Camera.main.transform.position = Tools.ClampMove(
+            Vector3 direction               =   touchStart - TouchPoint();
+            Camera.main.transform.position  =   Tools.ClampMove(
                 Camera.main.transform.position, direction, moveBorders
             );
         }
@@ -93,8 +106,9 @@ public class Control_Camera : MonoBehaviour {
 
     // ------------------------------------------------------------------------------------------
     void Zoom( float increment ) {
-        float   diffrence   =   zoomSpeed * Time.deltaTime * (increment < 0 ? -1 : 1);
-        float   newSize     =   Mathf.Clamp( Camera.main.orthographicSize - diffrence, zoomOutMin, zoomOutMax );
+        float   diffrence               =   zoomSpeed * Time.deltaTime * (increment < 0 ? -1 : 1);
+        float   newSize                 =   Mathf.Clamp(
+            Camera.main.orthographicSize - diffrence, zoomOutMin, zoomOutMax );
         Camera.main.orthographicSize    =   newSize;
     }
 
